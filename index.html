@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DealWatch — Secondhand Price Alerts</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--surface3:#2e2e2e;
+  --border:#333;--border2:#444;--text:#f0f0f0;--text2:#a0a0a0;--text3:#666;
+  --accent:#00e676;--accent-dim:#00c85a;--accent-bg:rgba(0,230,118,0.08);--accent-bg2:rgba(0,230,118,0.15);
+  --amber:#ffb300;--amber-bg:rgba(255,179,0,0.1);--red:#ff4444;--red-bg:rgba(255,68,68,0.1);
+  --blue:#4d9fff;--blue-bg:rgba(77,159,255,0.1);--gold:#ffd700;--gold-bg:rgba(255,215,0,0.1);
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;}
+.logo span{color:var(--accent);}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{padding:6px 14px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text2);font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;transition:all 0.15s;}
+.nav-tab:hover{color:var(--text);background:var(--surface2);}
+.nav-tab.active{background:var(--surface2);color:var(--text);font-weight:500;}
+.nav-badge{background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px;}
+.nav-badge.gold{background:var(--gold);color:#000;}
+
+/* PAGES */
+.page{display:none;max-width:880px;margin:0 auto;padding:1.5rem;}
+.page.active{display:block;}
+.page-header{margin-bottom:1.5rem;}
+.page-header h2{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;}
+.page-header p{font-size:0.85rem;color:var(--text2);}
+
+/* SEARCH */
+.search-hero{text-align:center;padding:2rem 0 1.5rem;}
+.search-hero h1{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;letter-spacing:-0.03em;margin-bottom:0.4rem;}
+.search-hero h1 span{color:var(--accent);}
+.search-hero p{color:var(--text2);font-size:0.9rem;}
+.search-bar{display:flex;gap:8px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:6px;margin-bottom:1rem;}
+.search-bar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:0.95rem;font-family:'Inter',sans-serif;padding:0.4rem 0.5rem;}
+.search-bar input::placeholder{color:var(--text3);}
+.search-bar button{background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);padding:0.55rem 1.25rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;font-size:0.9rem;white-space:nowrap;transition:background 0.15s;}
+.search-bar button:hover{background:var(--accent-dim);}
+.search-bar button:disabled{background:#1a4a2e;color:#2a7a4e;cursor:not-allowed;}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;}
+.filter-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--text2);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;transition:all 0.12s;}
+.filter-chip:hover{border-color:var(--border2);color:var(--text);}
+.filter-chip.on{background:var(--accent-bg2);border-color:var(--accent);color:var(--accent);font-weight:500;}
+
+/* LOADING */
+.loading{display:none;text-align:center;padding:3rem 0;}
+.loading.show{display:block;}
+.pulse-ring{display:inline-block;width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:1rem;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading p{color:var(--text2);font-size:0.9rem;}
+
+/* RESULTS */
+.results-wrap{display:none;}
+.results-wrap.show{display:block;}
+.result-summary{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;}
+.result-title{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;}
+.result-meta{display:flex;gap:8px;flex-wrap:wrap;}
+.meta-chip{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--text2);}
+.meta-chip b{color:var(--text);}
+.meta-chip.green{background:var(--accent-bg);border-color:rgba(0,230,118,0.3);color:var(--accent);}
+.meta-chip.gold{background:var(--gold-bg);border-color:rgba(255,215,0,0.3);color:var(--gold);}
+
+.best-card{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.best-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.best-price{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:700;letter-spacing:-0.03em;line-height:1;}
+.best-price small{font-size:0.9rem;font-weight:400;color:var(--text2);}
+.best-info{font-size:0.82rem;color:var(--text2);margin-top:5px;}
+.best-cond{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px;margin-left:6px;}
+.best-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.btn-primary{background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);padding:0.6rem 1.2rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;font-size:0.85rem;text-decoration:none;display:inline-block;transition:background 0.15s;white-space:nowrap;}
+.btn-primary:hover{background:var(--accent-dim);}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.55rem 1.1rem;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;font-size:0.82rem;transition:all 0.15s;white-space:nowrap;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+
+/* affiliate tag on cards */
+.aff-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px;background:var(--gold-bg);color:var(--gold);border:1px solid rgba(255,215,0,0.2);letter-spacing:0.05em;text-transform:uppercase;}
+
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+.deal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;transition:border-color 0.15s;display:flex;flex-direction:column;gap:6px;}
+.deal-card:hover{border-color:var(--border2);}
+.deal-card.top{border-color:rgba(0,230,118,0.4);}
+.card-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
+.card-platform{font-size:12px;font-weight:600;}
+.cond-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;}
+.cond-refurb{background:var(--blue-bg);color:var(--blue);}
+.cond-likenew{background:var(--accent-bg2);color:var(--accent);}
+.cond-used{background:var(--amber-bg);color:var(--amber);}
+.cond-parts{background:var(--surface3);color:var(--text2);}
+.card-price{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;}
+.card-currency{font-size:11px;font-weight:400;color:var(--text3);}
+.card-saving{font-size:11px;color:var(--accent);font-weight:500;}
+.card-ship{font-size:11px;color:var(--text3);}
+.card-note{font-size:11px;color:var(--text2);line-height:1.4;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:4px;}
+.card-link{font-size:12px;font-weight:500;color:var(--accent);text-decoration:none;padding:4px 10px;border:1px solid rgba(0,230,118,0.3);border-radius:6px;transition:all 0.12s;}
+.card-link:hover{background:var(--accent-bg);border-color:var(--accent);}
+.watch-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.12s;}
+.watch-btn:hover{border-color:var(--accent);color:var(--accent);}
+.watch-btn.watching{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);}
+
+/* EARNINGS DASHBOARD */
+.earn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem;}
+.earn-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;}
+.earn-label{font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;}
+.earn-value{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:-0.02em;}
+.earn-value.gold{color:var(--gold);}
+.earn-value.green{color:var(--accent);}
+.earn-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+
+.clicks-table{width:100%;border-collapse:collapse;font-size:13px;}
+.clicks-table th{text-align:left;padding:8px 12px;color:var(--text3);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);}
+.clicks-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);}
+.clicks-table td:first-child{color:var(--text);font-weight:500;}
+.clicks-table tr:last-child td{border-bottom:none;}
+.clicks-table .est{color:var(--accent);font-weight:600;}
+.clicks-table .plat-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;}
+
+.section-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--text);}
+
+/* AFFILIATE SETUP */
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:12px;}
+.setup-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.setup-plat-name{font-weight:600;font-size:0.95rem;}
+.setup-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px;}
+.setup-status.active{background:var(--accent-bg2);color:var(--accent);}
+.setup-status.inactive{background:var(--surface3);color:var(--text3);}
+.setup-row{display:flex;gap:8px;align-items:center;}
+.setup-row input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.5rem 0.75rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.85rem;outline:none;transition:border-color 0.15s;}
+.setup-row input:focus{border-color:var(--accent);}
+.setup-row input::placeholder{color:var(--text3);}
+.setup-save-btn{background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);padding:0.5rem 1rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;font-size:0.82rem;white-space:nowrap;}
+.setup-save-btn:hover{background:var(--accent-dim);}
+.setup-hint{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5;}
+.setup-hint a{color:var(--blue);text-decoration:none;}
+.setup-hint a:hover{text-decoration:underline;}
+
+.setup-rate{font-size:11px;color:var(--text2);display:flex;gap:12px;margin-top:8px;}
+.setup-rate span{background:var(--surface3);padding:2px 8px;border-radius:4px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:1.5rem;width:100%;max-width:400px;margin:1rem;}
+.modal h3{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:0.25rem;}
+.modal p{font-size:0.85rem;color:var(--text2);margin-bottom:1.25rem;}
+.modal label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px;}
+.modal input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.9rem;outline:none;margin-bottom:1rem;}
+.modal input:focus{border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.55rem 1rem;color:var(--text2);font-family:'Inter',sans-serif;cursor:pointer;font-size:0.85rem;}
+.btn-save{background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);padding:0.55rem 1.1rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;font-size:0.85rem;}
+
+/* WATCHLIST */
+.wl-empty{text-align:center;padding:4rem 1rem;color:var(--text3);}
+.wl-empty-icon{font-size:2.5rem;margin-bottom:1rem;}
+.wl-empty h2{font-family:'Space Grotesk',sans-serif;color:var(--text2);margin-bottom:0.4rem;}
+.wl-empty p{font-size:0.85rem;line-height:1.6;max-width:300px;margin:0 auto;}
+.wl-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.wl-name{font-weight:600;font-size:0.95rem;margin-bottom:3px;}
+.wl-details{font-size:12px;color:var(--text2);}
+.wl-alert{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:5px;}
+.wl-alert.set{background:var(--accent-bg);color:var(--accent);}
+.wl-alert.none{background:var(--surface2);color:var(--text3);}
+.wl-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;}
+.wl-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;font-size:12px;color:var(--text);cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.12s;}
+.wl-btn:hover{border-color:var(--accent);color:var(--accent);}
+.wl-del{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 10px;font-size:12px;color:var(--text3);cursor:pointer;transition:all 0.12s;}
+.wl-del:hover{border-color:var(--red);color:var(--red);}
+
+.error-bar{background:var(--red-bg);border:1px solid rgba(255,68,68,0.3);border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--red);font-size:0.85rem;margin-bottom:1rem;display:none;}
+.error-bar.show{display:block;}
+
+.suggestions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:1rem;}
+.sug{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12px;color:var(--text2);cursor:pointer;transition:all 0.12s;}
+.sug:hover{border-color:var(--accent);color:var(--accent);}
+
+.info-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;font-size:0.85rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;}
+.info-box b{color:var(--text);}
+
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:0.7rem 1rem;font-size:13px;color:var(--text);z-index:300;transform:translateY(80px);opacity:0;transition:all 0.25s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.green{border-color:rgba(0,230,118,0.4);color:var(--accent);}
+.toast.gold{border-color:rgba(255,215,0,0.4);color:var(--gold);}
+
+@media(max-width:560px){
+  .nav{padding:0.75rem 1rem;gap:8px;}
+  .logo{font-size:1rem;}
+  .nav-tab{padding:5px 8px;font-size:12px;}
+  .page{padding:1rem;}
+  .search-hero h1{font-size:1.4rem;}
+  .best-price{font-size:1.6rem;}
+  .best-card{flex-direction:column;}
+  .best-actions{width:100%;align-items:stretch;}
+  .earn-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="logo">Deal<span>Watch</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('search')">Search</button>
+    <button class="nav-tab" onclick="showPage('watchlist')">Watchlist <span class="nav-badge" id="wlCount">0</span></button>
+    <button class="nav-tab" onclick="showPage('earnings')">Earnings <span class="nav-badge gold" id="earnBadge">$0</span></button>
+    <button class="nav-tab" onclick="showPage('affiliate')">Affiliate setup</button>
+  </div>
+</nav>
+
+<!-- ═══ SEARCH PAGE ═══ -->
+<div class="page active" id="page-search">
+  <div class="search-hero">
+    <h1>Never miss a <span>secondhand deal</span></h1>
+    <p>Searches eBay, Gumtree, Back Market, Facebook Marketplace & more simultaneously</p>
+  </div>
+  <div class="search-bar">
+    <input type="text" id="searchQ" placeholder="iPhone 15 Pro, MacBook Air M2, PS5, Dyson V11..." />
+    <button id="searchBtn" onclick="doSearch()">Search deals</button>
+  </div>
+  </div>
+  <div class="filter-row">
+    <span style="font-size:12px;color:var(--text3);align-self:center;margin-right:2px;">Condition:</span>
+    <button class="filter-chip on" data-f="all" onclick="setFilter(this)">All</button>
+    <button class="filter-chip" data-f="refurb" onclick="setFilter(this)">Refurbished</button>
+    <button class="filter-chip" data-f="likenew" onclick="setFilter(this)">Like new</button>
+    <button class="filter-chip" data-f="used" onclick="setFilter(this)">Used</button>
+  </div>
+  <div class="error-bar" id="errBar"></div>
+  <div class="loading" id="loadingEl">
+    <div class="pulse-ring"></div>
+    <p id="loadingText">Scanning platforms...</p>
+  </div>
+  <div class="results-wrap" id="resultsWrap"></div>
+  <div id="searchEmpty" style="text-align:center;padding:2.5rem 0;color:var(--text3);">
+    <div style="font-size:2rem;margin-bottom:0.75rem;">🔍</div>
+    <div style="font-size:0.9rem;color:var(--text2);margin-bottom:0.25rem;">Search any product to compare secondhand prices</div>
+    <div style="font-size:0.8rem;margin-bottom:1rem;">Affiliate links earn you a commission on every purchase</div>
+    <div class="suggestions">
+      <span class="sug" onclick="quickSearch('iPhone 15 Pro')">iPhone 15 Pro</span>
+      <span class="sug" onclick="quickSearch('MacBook Air M2')">MacBook Air M2</span>
+      <span class="sug" onclick="quickSearch('Sony WH-1000XM5')">Sony WH-1000XM5</span>
+      <span class="sug" onclick="quickSearch('Nintendo Switch')">Nintendo Switch</span>
+      <span class="sug" onclick="quickSearch('Dyson V11')">Dyson V11</span>
+      <span class="sug" onclick="quickSearch('iPad Pro')">iPad Pro</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ WATCHLIST PAGE ═══ -->
+<div class="page" id="page-watchlist">
+  <div class="page-header">
+    <h2>Your watchlist</h2>
+    <p>Saved searches with price alerts. Re-search any time to check latest deals.</p>
+  </div>
+  <div id="watchlistContent"></div>
+</div>
+
+<!-- ═══ EARNINGS PAGE ═══ -->
+<div class="page" id="page-earnings">
+  <div class="page-header">
+    <h2>Earnings dashboard</h2>
+    <p>Track affiliate clicks and estimated commissions across all platforms.</p>
+  </div>
+  <div class="earn-grid" id="earnGrid"></div>
+  <div class="section-title">Click log</div>
+  <div id="clickLog"></div>
+</div>
+
+<!-- ═══ AFFILIATE SETUP PAGE ═══ -->
+<div class="page" id="page-affiliate">
+  <div class="page-header">
+    <h2>Affiliate setup</h2>
+    <p>Enter your affiliate IDs for each platform. Every outbound click will automatically include your tracking tag.</p>
+  </div>
+  <div class="info-box">
+    <b>How it works:</b> When a user clicks a listing, DealWatch rewrites the URL to include your affiliate ID before opening it. If they buy anything within the cookie window, you earn a commission. No extra clicks needed — it's automatic.
+  </div>
+  <div id="affiliateSetup"></div>
+</div>
+
+<!-- ALERT MODAL -->
+<div class="modal-overlay" id="alertModal">
+  <div class="modal">
+    <h3>Set price alert</h3>
+    <p id="alertModalDesc">Get notified when this item drops below your target price.</p>
+    <label>Target price (AUD)</label>
+    <input type="number" id="alertPrice" placeholder="e.g. 350" min="1" />
+    <label>Your email</label>
+    <input type="email" id="alertEmail" placeholder="you@email.com" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveAlert()">Save alert</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// AFFILIATE CONFIG
+// Each platform: id (storage key), name, colour,
+// commission rate range (for display),
+// buildUrl(originalUrl, affiliateId) → rewritten URL,
+// signupUrl (where to get an affiliate ID),
+// cookieDays
+// ═══════════════════════════════════════════
+const PLATFORMS = {
+  ebay: {
+    name: 'eBay Australia',
+    color: '#f5af02',
+    commission: '1–4%',
+    cookieDays: 24,
+    signupUrl: 'https://partnernetwork.ebay.com.au/',
+    hint: 'Get your Campaign ID from eBay Partner Network Australia.',
+    buildUrl(url, id) {
+      if (!id || !url) return url;
+      try {
+        const u = new URL(url);
+        u.searchParams.set('campid', id);
+        u.searchParams.set('toolid', '10001');
+        u.searchParams.set('customid', 'dealwatch');
+        return u.toString();
+      } catch { return url; }
+    }
+  },
+  backmarket: {
+    name: 'Back Market',
+    color: '#25d898',
+    commission: '3–5%',
+    cookieDays: 30,
+    signupUrl: 'https://www.backmarket.com.au/en-au/affiliate',
+    hint: 'Apply via Back Market\'s affiliate program. Add your tracking parameter here.',
+    buildUrl(url, id) {
+      if (!id || !url) return url;
+      try {
+        const u = new URL(url);
+        u.searchParams.set('utm_source', 'dealwatch');
+        u.searchParams.set('utm_medium', 'affiliate');
+        u.searchParams.set('utm_campaign', id);
+        return u.toString();
+      } catch { return url; }
+    }
+  },
+  amazon: {
+    name: 'Amazon / Renewed',
+    color: '#ff9900',
+    commission: '2–4%',
+    cookieDays: 24,
+    signupUrl: 'https://affiliate-program.amazon.com.au/',
+    hint: 'Your Amazon Associates tracking ID (e.g. dealwatch-22).',
+    buildUrl(url, id) {
+      if (!id || !url) return url;
+      try {
+        const u = new URL(url);
+        u.searchParams.set('tag', id);
+        return u.toString();
+      } catch { return url; }
+    }
+  },
+  reebelo: {
+    name: 'Reebelo',
+    color: '#6c63ff',
+    commission: '2–5%',
+    cookieDays: 30,
+    signupUrl: 'https://reebelo.com.au/pages/affiliate',
+    hint: 'Get your referral code from the Reebelo affiliate dashboard.',
+    buildUrl(url, id) {
+      if (!id || !url) return url;
+      try {
+        const u = new URL(url);
+        u.searchParams.set('ref', id);
+        return u.toString();
+      } catch { return url; }
+    }
+  },
+  ozmobiles: {
+    name: 'OzMobiles',
+    color: '#e74c3c',
+    commission: '2–3%',
+    cookieDays: 30,
+    signupUrl: 'https://www.ozmobiles.com.au/affiliate/',
+    hint: 'Enter your OzMobiles affiliate referral code.',
+    buildUrl(url, id) {
+      if (!id || !url) return url;
+      try {
+        const u = new URL(url);
+        u.searchParams.set('aff', id);
+        return u.toString();
+      } catch { return url; }
+    }
+  },
+  swappa: {
+    name: 'Swappa',
+    color: '#3498db',
+    commission: '1–2%',
+    cookieDays: 7,
+    signupUrl: 'https://swappa.com/affiliate',
+    hint: 'Enter your Swappa affiliate tag.',
+    buildUrl(url, id) {
+      if (!id || !url) return url;
+      try {
+        const u = new URL(url);
+        u.searchParams.set('ref', id);
+        return u.toString();
+      } catch { return url; }
+    }
+  }
+};
+
+// ═══ STORAGE ═══
+let affiliateIds = JSON.parse(localStorage.getItem('dw_affiliate') || '{}');
+let watchlist    = JSON.parse(localStorage.getItem('dw_watchlist') || '[]');
+let clickLog     = JSON.parse(localStorage.getItem('dw_clicks')    || '[]');
+
+function saveAffiliates() { localStorage.setItem('dw_affiliate', JSON.stringify(affiliateIds)); }
+function saveWatchlist()  { localStorage.setItem('dw_watchlist',  JSON.stringify(watchlist));  updateWLCount(); }
+function saveClicks()     { localStorage.setItem('dw_clicks',     JSON.stringify(clickLog));   updateEarnBadge(); }
+
+// ═══ AFFILIATE URL BUILDER ═══
+function platformKey(platformName) {
+  const n = (platformName||'').toLowerCase();
+  if (n.includes('ebay'))        return 'ebay';
+  if (n.includes('back market')) return 'backmarket';
+  if (n.includes('amazon'))      return 'amazon';
+  if (n.includes('reebelo'))     return 'reebelo';
+  if (n.includes('ozmobiles'))   return 'ozmobiles';
+  if (n.includes('swappa'))      return 'swappa';
+  return null;
+}
+
+function buildAffiliateUrl(originalUrl, platformName) {
+  const key = platformKey(platformName);
+  if (!key) return originalUrl;
+  const id = affiliateIds[key];
+  if (!id) return originalUrl;
+  return PLATFORMS[key].buildUrl(originalUrl, id);
+}
+
+function hasAffiliateId(platformName) {
+  const key = platformKey(platformName);
+  return key && !!affiliateIds[key];
+}
+
+// Commission rate estimates (midpoint of range)
+const COMMISSION_RATES = { ebay:0.025, backmarket:0.04, amazon:0.03, reebelo:0.035, ozmobiles:0.025, swappa:0.015 };
+
+function estimateCommission(platformName, price) {
+  const key = platformKey(platformName);
+  const rate = COMMISSION_RATES[key] || 0.02;
+  return price * rate;
+}
+
+// ═══ CLICK TRACKING ═══
+function trackClick(platform, product, price, url) {
+  const entry = {
+    platform, product, price,
+    url, ts: Date.now(),
+    estCommission: estimateCommission(platform, price),
+    hasAffiliate: hasAffiliateId(platform)
+  };
+  clickLog.unshift(entry);
+  if (clickLog.length > 200) clickLog.pop();
+  saveClicks();
+  if (entry.hasAffiliate) showToast(`+$${entry.estCommission.toFixed(2)} est. commission tracked`, 'gold');
+}
+
+function handleCardClick(platform, product, price, originalUrl) {
+  const affUrl = buildAffiliateUrl(originalUrl, platform);
+  trackClick(platform, product, price, affUrl);
+  window.open(affUrl, '_blank');
+}
+
+// ═══ NAV ═══
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const pages = ['search','watchlist','earnings','affiliate'];
+  document.querySelectorAll('.nav-tab')[pages.indexOf(p)].classList.add('active');
+  if (p === 'watchlist') renderWatchlist();
+  if (p === 'earnings')  renderEarnings();
+  if (p === 'affiliate') renderAffiliateSetup();
+}
+
+function updateWLCount()   { document.getElementById('wlCount').textContent = watchlist.length; }
+function updateEarnBadge() {
+  const total = clickLog.filter(c=>c.hasAffiliate).reduce((s,c)=>s+c.estCommission,0);
+  document.getElementById('earnBadge').textContent = total >= 1000
+    ? '$' + (total/1000).toFixed(1) + 'k'
+    : '$' + total.toFixed(0);
+}
+updateWLCount(); updateEarnBadge();
+
+// ═══ SEARCH ═══
+document.getElementById('searchQ').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+function quickSearch(q) { document.getElementById('searchQ').value = q; doSearch(); }
+
+let lastResults=[], lastProduct='', lastNewPrice=null, lastCurrency='AUD', activeFilter='all', alertTarget=null;
+
+function setFilter(btn) {
+  activeFilter = btn.dataset.f;
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if (lastResults.length) renderResults();
+}
+
+function condClass(c) {
+  const s=(c||'').toLowerCase();
+  if(s.includes('refurb')||s.includes('certified')) return 'cond-refurb';
+  if(s.includes('like new')||s.includes('excellent')||s.includes('mint')) return 'cond-likenew';
+  if(s.includes('parts')) return 'cond-parts';
+  return 'cond-used';
+}
+function condLabel(c) {
+  const s=(c||'').toLowerCase();
+  if(s.includes('refurb')) return 'Refurbished';
+  if(s.includes('like new')||s.includes('excellent')||s.includes('mint')) return 'Like New';
+  if(s.includes('parts')) return 'For Parts';
+  return 'Used';
+}
+function fmt(p){ return '$'+Number(p).toFixed(2); }
+
+async function doSearch() {
+  const q = document.getElementById('searchQ').value.trim();
+  if(!q){ document.getElementById('searchQ').focus(); return; }
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true; btn.textContent = 'Searching...';
+  document.getElementById('errBar').classList.remove('show');
+  document.getElementById('searchEmpty').style.display = 'none';
+  document.getElementById('resultsWrap').classList.remove('show');
+  document.getElementById('loadingEl').classList.add('show');
+  document.getElementById('loadingText').textContent = 'Gemini is scanning eBay, Back Market & more for "' + q + '"...';
+  try {
+    const resp = await fetch('/api/search', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tools:[{google_search:{}}],
+        generationConfig:{temperature:0.1},
+        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney).
+Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings.
+Find secondhand/refurbished listings for: ${q} in Australia.
+Return ONLY valid JSON — no markdown, no backticks, no explanation:
+{"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/itm/...","notes":"128GB unlocked"}]}
+Return 5-9 real listings with real URLs, sorted by price ascending. new_price = current new retail AUD (null if unknown). Only include listings that actually exist right now.`}]}]
+      })
+    });
+    if(resp.status===400) throw new Error('Bad request. Try a more specific product name.');
+    if(resp.status===429) throw new Error('Rate limit hit. Wait a moment and try again.');
+    if(!resp.ok) throw new Error('Search error '+resp.status+'. Please try again.');
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error.message||'Gemini error');
+    const parts = data.candidates?.[0]?.content?.parts||[];
+    const text = parts.filter(p=>p.text).map(p=>p.text).join('');
+    const match = text.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('No listings found. Try a more specific product name.');
+    const parsed = JSON.parse(match[0]);
+    if(!parsed.results||!parsed.results.length) throw new Error('No secondhand listings found.');
+    lastResults=parsed.results; lastProduct=parsed.product||q;
+    lastNewPrice=parsed.new_price||null; lastCurrency=parsed.currency||'AUD';
+    renderResults();
+  } catch(e) {
+    const eb=document.getElementById('errBar');
+    eb.textContent='⚠ '+(e.message||'Something went wrong.');
+    eb.classList.add('show');
+    document.getElementById('searchEmpty').style.display='block';
+  } finally {
+    document.getElementById('loadingEl').classList.remove('show');
+    btn.disabled=false; btn.textContent='Search deals';
+  }
+}
+
+function renderResults() {
+  let filtered = lastResults;
+  if(activeFilter !== 'all') {
+    const map={refurb:['refurb','certified'],likenew:['like new','excellent','mint'],used:['used','good','fair','worn']};
+    const keys=map[activeFilter]||[];
+    const f=lastResults.filter(r=>keys.some(k=>(r.condition||'').toLowerCase().includes(k)));
+    if(f.length) filtered=f;
+  }
+  const sorted=[...filtered].sort((a,b)=>a.price-b.price);
+  const cheapest=sorted[0], priciest=sorted[sorted.length-1];
+  const saving=lastNewPrice?(lastNewPrice-cheapest.price):null;
+  const savePct=saving?Math.round((saving/lastNewPrice)*100):null;
+  const inWatchlist=watchlist.some(w=>w.product.toLowerCase()===lastProduct.toLowerCase());
+
+  // Count how many results have affiliate links ready
+  const affCount = sorted.filter(r=>hasAffiliateId(r.platform)).length;
+
+  let html='';
+  html+=`<div class="result-summary">
+    <div class="result-title">${lastProduct}</div>
+    <div class="result-meta">
+      <div class="meta-chip"><b>${sorted.length}</b> listings</div>
+      <div class="meta-chip">From <b>${fmt(cheapest.price)}</b> – <b>${fmt(priciest.price)}</b></div>
+      ${lastNewPrice?`<div class="meta-chip">New: <b>${fmt(lastNewPrice)}</b></div>`:''}
+      ${savePct>0?`<div class="meta-chip green">Save up to <b>${savePct}%</b> vs new</div>`:''}
+      ${affCount>0?`<div class="meta-chip gold">💰 <b>${affCount}</b> affiliate link${affCount!==1?'s':''} active</div>`:''}
+    </div>
+  </div>`;
+
+  const cheapAffUrl = cheapest.url ? buildAffiliateUrl(cheapest.url, cheapest.platform) : null;
+  html+=`<div class="best-card">
+    <div>
+      <div class="best-label">★ Best deal found</div>
+      <div class="best-price">${fmt(cheapest.price)} <small>${lastCurrency}</small></div>
+      <div class="best-info">${cheapest.platform} · ${cheapest.shipping||'check listing'}
+        <span class="best-cond ${condClass(cheapest.condition)}">${condLabel(cheapest.condition)}</span>
+        ${hasAffiliateId(cheapest.platform)?`<span class="aff-tag" style="margin-left:6px">💰 aff</span>`:''}
+      </div>
+      ${cheapest.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px">${cheapest.notes}</div>`:''}
+    </div>
+    <div class="best-actions">
+      ${cheapAffUrl?`<button class="btn-primary" onclick="handleCardClick('${esc(cheapest.platform)}','${esc(lastProduct)}',${cheapest.price},'${esc(cheapest.url)}')">View listing →</button>`:''}
+      <button class="btn-ghost ${inWatchlist?'watching':''}" onclick="toggleWatch('${esc(lastProduct)}',${cheapest.price})">
+        ${inWatchlist?'✓ In watchlist':'+ Add to watchlist'}
+      </button>
+    </div>
+  </div>`;
+
+  html+=`<div class="cards-grid">`;
+  sorted.forEach((r,i)=>{
+    const vsNew=lastNewPrice&&r.price<lastNewPrice?Math.round(((lastNewPrice-r.price)/lastNewPrice)*100):null;
+    const hasAff=hasAffiliateId(r.platform);
+    html+=`<div class="deal-card ${i===0?'top':''}">
+      <div class="card-top-row">
+        <div class="card-platform">${r.platform} ${hasAff?'<span class="aff-tag">💰</span>':''}</div>
+        <span class="cond-tag ${condClass(r.condition)}">${condLabel(r.condition)}</span>
+      </div>
+      <div class="card-price">${fmt(r.price)} <span class="card-currency">${lastCurrency}</span></div>
+      ${vsNew?`<div class="card-saving">↓ ${vsNew}% cheaper than new</div>`:''}
+      ${r.shipping?`<div class="card-ship">${r.shipping}</div>`:''}
+      ${r.notes?`<div class="card-note">${r.notes}</div>`:''}
+      <div class="card-footer">
+        ${r.url?`<button class="card-link" onclick="handleCardClick('${esc(r.platform)}','${esc(lastProduct)}',${r.price},'${esc(r.url)}')">View →</button>`:'<span></span>'}
+        <button class="watch-btn" onclick="openAlertModal('${esc(lastProduct)}',${r.price})">🔔 Alert</button>
+      </div>
+      ${hasAff?`<div style="font-size:10px;color:var(--gold);margin-top:2px;">Est. commission: ${fmt(estimateCommission(r.platform,r.price))}</div>`:''}
+    </div>`;
+  });
+  html+=`</div>`;
+
+  const setupCount = Object.keys(PLATFORMS).length - Object.keys(affiliateIds).filter(k=>affiliateIds[k]).length;
+  if(setupCount > 0) {
+    html+=`<div style="background:var(--gold-bg);border:1px solid rgba(255,215,0,0.2);border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-top:1rem;font-size:12px;color:var(--gold);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <span>💰 Set up ${setupCount} more affiliate ID${setupCount!==1?'s':''} to earn commissions on every click</span>
+      <button onclick="showPage('affiliate')" style="background:var(--gold);color:#000;border:none;border-radius:6px;padding:4px 12px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;">Set up now →</button>
+    </div>`;
+  }
+
+  html+=`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">Powered by Gemini 2.0 Flash · Affiliate links earn a commission when you purchase · Prices in ${lastCurrency} · Verify listings before buying</div>`;
+
+  const rw=document.getElementById('resultsWrap');
+  rw.innerHTML=html; rw.classList.add('show');
+}
+
+function esc(s){ return String(s||'').replace(/'/g,"\\'").replace(/\n/g,' '); }
+
+// ═══ WATCHLIST ═══
+function toggleWatch(product, price) {
+  const idx=watchlist.findIndex(w=>w.product.toLowerCase()===product.toLowerCase());
+  if(idx>-1){ watchlist.splice(idx,1); showToast('Removed from watchlist'); }
+  else{ watchlist.push({product,lowestSeen:price,alert:null,addedAt:Date.now()}); showToast('Added to watchlist ✓','green'); }
+  saveWatchlist(); renderResults();
+}
+
+function renderWatchlist() {
+  const el=document.getElementById('watchlistContent');
+  if(!watchlist.length){
+    el.innerHTML=`<div class="wl-empty"><div class="wl-empty-icon">📋</div><h2>Watchlist is empty</h2><p>Search for a product and add it to track prices and set alerts.</p></div>`;
+    return;
+  }
+  el.innerHTML=watchlist.map((w,i)=>`
+    <div class="wl-item">
+      <div>
+        <div class="wl-name">${w.product}</div>
+        <div class="wl-details">Lowest seen: ${fmt(w.lowestSeen)} AUD · Added ${new Date(w.addedAt).toLocaleDateString('en-AU')}</div>
+        <div style="margin-top:5px"><span class="wl-alert ${w.alert?'set':'none'}">${w.alert?`🔔 Alert below $${w.alert.price}`:'🔕 No alert set'}</span></div>
+      </div>
+      <div class="wl-actions">
+        <button class="wl-btn" onclick="wlSearch('${esc(w.product)}')">Search now</button>
+        <button class="wl-btn" style="border-color:var(--amber);color:var(--amber)" onclick="openAlertModal('${esc(w.product)}',${w.lowestSeen})">Set alert</button>
+        <button class="wl-del" onclick="removeWatch(${i})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function removeWatch(i){ watchlist.splice(i,1); saveWatchlist(); renderWatchlist(); showToast('Removed'); }
+function wlSearch(p){ document.getElementById('searchQ').value=p; showPage('search'); doSearch(); }
+
+// ═══ EARNINGS DASHBOARD ═══
+function renderEarnings() {
+  const totalClicks   = clickLog.length;
+  const affClicks     = clickLog.filter(c=>c.hasAffiliate).length;
+  const estTotal      = clickLog.filter(c=>c.hasAffiliate).reduce((s,c)=>s+c.estCommission,0);
+  const today         = new Date().toDateString();
+  const todayEst      = clickLog.filter(c=>c.hasAffiliate&&new Date(c.ts).toDateString()===today).reduce((s,c)=>s+c.estCommission,0);
+
+  document.getElementById('earnGrid').innerHTML=`
+    <div class="earn-card"><div class="earn-label">Est. total earned</div><div class="earn-value gold">${fmt(estTotal)}</div><div class="earn-sub">all time</div></div>
+    <div class="earn-card"><div class="earn-label">Today</div><div class="earn-value green">${fmt(todayEst)}</div><div class="earn-sub">estimated</div></div>
+    <div class="earn-card"><div class="earn-label">Total clicks</div><div class="earn-value">${totalClicks}</div><div class="earn-sub">all platforms</div></div>
+    <div class="earn-card"><div class="earn-label">Affiliate clicks</div><div class="earn-value">${affClicks}</div><div class="earn-sub">tracked</div></div>`;
+
+  // Per-platform breakdown
+  const byPlatform = {};
+  clickLog.forEach(c=>{
+    const k=platformKey(c.platform)||c.platform;
+    if(!byPlatform[k]) byPlatform[k]={name:c.platform,clicks:0,affClicks:0,est:0};
+    byPlatform[k].clicks++;
+    if(c.hasAffiliate){ byPlatform[k].affClicks++; byPlatform[k].est+=c.estCommission; }
+  });
+
+  const logEl=document.getElementById('clickLog');
+  if(!clickLog.length){
+    logEl.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:0.85rem;">No clicks tracked yet. Search for products and click listings to start earning.</div>`;
+    return;
+  }
+
+  let tbl=`<table class="clicks-table"><thead><tr><th>Platform</th><th>Clicks</th><th>Affiliate</th><th>Est. commission</th></tr></thead><tbody>`;
+  Object.values(byPlatform).sort((a,b)=>b.est-a.est).forEach(p=>{
+    const key=platformKey(p.name);
+    const col=(PLATFORMS[key]||{}).color||'#888';
+    tbl+=`<tr><td><span class="plat-dot" style="background:${col}"></span>${p.name}</td><td>${p.clicks}</td><td>${p.affClicks}</td><td class="est">${fmt(p.est)}</td></tr>`;
+  });
+  tbl+=`</tbody></table>`;
+  tbl+=`<div style="font-size:11px;color:var(--text3);margin-top:0.75rem;line-height:1.6;">Estimates based on average commission rates. Actual payouts depend on your affiliate agreement and whether purchases were completed within the cookie window.</div>`;
+  logEl.innerHTML=tbl;
+}
+
+// ═══ AFFILIATE SETUP ═══
+function renderAffiliateSetup() {
+  const el=document.getElementById('affiliateSetup');
+  el.innerHTML=Object.entries(PLATFORMS).map(([key,p])=>{
+    const saved=affiliateIds[key]||'';
+    const isActive=!!saved;
+    return `<div class="setup-card">
+      <div class="setup-card-header">
+        <div class="setup-plat-name" style="color:${p.color}">${p.name}</div>
+        <span class="setup-status ${isActive?'active':'inactive'}">${isActive?'Active':'Not set'}</span>
+      </div>
+      <div class="setup-row">
+        <input type="text" id="aff_${key}" value="${saved}" placeholder="Your affiliate ID / tracking code" />
+        <button class="setup-save-btn" onclick="saveAffiliateId('${key}')">Save</button>
+      </div>
+      <div class="setup-rate">
+        <span>Commission: ${p.commission}</span>
+        <span>Cookie: ${p.cookieDays} days</span>
+      </div>
+      <div class="setup-hint">${p.hint} <a href="${p.signupUrl}" target="_blank">Sign up →</a></div>
+    </div>`;
+  }).join('');
+}
+
+function saveAffiliateId(key) {
+  const val=document.getElementById('aff_'+key).value.trim();
+  affiliateIds[key]=val;
+  saveAffiliates();
+  renderAffiliateSetup();
+  showToast(val ? `${PLATFORMS[key].name} affiliate ID saved ✓` : `${PLATFORMS[key].name} ID cleared`, val?'green':null);
+}
+
+// ═══ ALERT MODAL ═══
+function openAlertModal(product, currentPrice) {
+  alertTarget={product,currentPrice};
+  document.getElementById('alertModalDesc').textContent=`Notify me when "${product}" drops below my target price.`;
+  document.getElementById('alertPrice').value=Math.round(currentPrice*0.85);
+  document.getElementById('alertEmail').value='';
+  document.getElementById('alertModal').classList.add('show');
+}
+function closeModal(){ document.getElementById('alertModal').classList.remove('show'); alertTarget=null; }
+function saveAlert(){
+  const price=parseFloat(document.getElementById('alertPrice').value);
+  const email=document.getElementById('alertEmail').value.trim();
+  if(!price||price<=0){ showToast('Enter a valid target price'); return; }
+  if(!email||!email.includes('@')){ showToast('Enter a valid email address'); return; }
+  const existing=watchlist.find(w=>w.product.toLowerCase()===alertTarget.product.toLowerCase());
+  if(existing) existing.alert={price,email};
+  else watchlist.push({product:alertTarget.product,lowestSeen:alertTarget.currentPrice,alert:{price,email},addedAt:Date.now()});
+  saveWatchlist(); closeModal();
+  showToast(`Alert set — notify below $${price}`,'green');
+  if(document.getElementById('page-watchlist').classList.contains('active')) renderWatchlist();
+}
+document.getElementById('alertModal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+
+// ═══ TOAST ═══
+let toastTimer;
+function showToast(msg, type) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
