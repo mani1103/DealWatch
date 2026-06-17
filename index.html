@@ -446,6 +446,14 @@ function buildAffiliateUrl(originalUrl, platformName) {
   return PLATFORMS[key].buildUrl(originalUrl, id);
 }
 
+function getValidUrl(url, platform, product) {
+  // If URL is missing, a placeholder, or doesn't look like a real URL use search fallback
+  if (!url || url.includes('...') || url === '#' || !url.startsWith('http')) {
+    return buildSearchUrl(platform, product);
+  }
+  return url;
+}
+
 function hasAffiliateId(platformName) {
   const key = platformKey(platformName);
   return key && !!affiliateIds[key];
@@ -475,7 +483,8 @@ function trackClick(platform, product, price, url) {
 }
 
 function handleCardClick(platform, product, price, originalUrl) {
-  const affUrl = buildAffiliateUrl(originalUrl, platform);
+  const validUrl = getValidUrl(originalUrl, platform, product);
+  const affUrl = buildAffiliateUrl(validUrl, platform);
   trackClick(platform, product, price, affUrl);
   window.open(affUrl, '_blank');
 }
@@ -530,6 +539,20 @@ function condLabel(c) {
 }
 function fmt(p){ return '$'+Number(p).toFixed(2); }
 
+function buildSearchUrl(platform, product) {
+  const q = encodeURIComponent(product);
+  const p = (platform||'').toLowerCase();
+  if(p.includes('ebay'))        return `https://www.ebay.com.au/sch/i.html?_nkw=${q}&LH_ItemCondition=2500`;
+  if(p.includes('back market')) return `https://www.backmarket.com.au/en-au/search?q=${q}`;
+  if(p.includes('gumtree'))     return `https://www.gumtree.com.au/s-${q}/k0`;
+  if(p.includes('reebelo'))     return `https://reebelo.com.au/search?q=${q}`;
+  if(p.includes('ozmobiles'))   return `https://www.ozmobiles.com.au/search?q=${q}`;
+  if(p.includes('amazon'))      return `https://www.amazon.com.au/s?k=${q}+renewed`;
+  if(p.includes('swappa'))      return `https://swappa.com/buy/${q.replace(/%20/g,'-')}`;
+  if(p.includes('facebook'))    return `https://www.facebook.com/marketplace/search/?query=${q}`;
+  return `https://www.google.com/search?q=${q}+secondhand+australia`;
+}
+
 async function doSearch() {
   const q = document.getElementById('searchQ').value.trim();
   if(!q){ document.getElementById('searchQ').focus(); return; }
@@ -557,7 +580,7 @@ async function doSearch() {
       body: JSON.stringify({
         tools:[{google_search:{}}],
         generationConfig:{temperature:0.1, thinkingConfig:{thinkingBudget:0}},
-        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney). Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings. Find secondhand/refurbished listings for: ${q} in Australia. Return ONLY valid JSON — no markdown, no backticks, no explanation: {"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/itm/...","notes":"128GB unlocked"}]} Return 5-9 real listings with real URLs, sorted by price ascending. new_price = current new retail AUD (null if unknown).`}]}]
+        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney). Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings. Find secondhand/refurbished listings for: ${q} in Australia. Return ONLY valid JSON — no markdown, no backticks, no explanation: {"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/sch/i.html?_nkw=iphone+15+pro&LH_ItemCondition=2500","notes":"128GB unlocked"}]} IMPORTANT for URLs: use search page URLs not direct listing URLs. eBay: https://www.ebay.com.au/sch/i.html?_nkw=QUERY&LH_ItemCondition=2500. Back Market: https://www.backmarket.com.au/en-au/search?q=QUERY. Gumtree: https://www.gumtree.com.au/s-QUERY/k0. Reebelo: https://reebelo.com.au/search?q=QUERY. Amazon: https://www.amazon.com.au/s?k=QUERY+renewed. Replace QUERY with the actual product search terms URL encoded. Return 5-9 listings sorted by price ascending. new_price = current new retail AUD (null if unknown).`}]}]
       })
     });
     if(!resp.ok) {
