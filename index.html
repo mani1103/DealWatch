@@ -649,7 +649,7 @@ function renderResults() {
         ${hasAffiliateId(cheapest.platform)?`<span class="aff-tag" style="margin-left:6px">💰 aff</span>`:''}
       </div>
       ${cheapest.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px">${cheapest.notes}</div>`:''}
-    </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;">⚠ Price is approximate — verify on site before buying</div>
     <div class="best-actions">
       ${cheapAffUrl?`<button class="btn-primary" onclick="handleCardClick('${esc(cheapest.platform)}','${esc(lastProduct)}',${cheapest.price},'${esc(cheapest.url)}')">View listing →</button>`:''}
       <button class="btn-ghost ${inWatchlist?'watching':''}" onclick="toggleWatch('${esc(lastProduct)}',${cheapest.price})">
@@ -671,7 +671,7 @@ function renderResults() {
       ${vsNew?`<div class="card-saving">↓ ${vsNew}% cheaper than new</div>`:''}
       ${r.shipping?`<div class="card-ship">${r.shipping}</div>`:''}
       ${r.notes?`<div class="card-note">${r.notes}</div>`:''}
-      <div class="card-footer">
+      <div style="font-size:10px;color:var(--text3);">⚠ Approx. price — verify on site</div>
         ${r.url?`<button class="card-link" onclick="handleCardClick('${esc(r.platform)}','${esc(lastProduct)}',${r.price},'${esc(r.url)}')">View →</button>`:'<span></span>'}
         <button class="watch-btn" onclick="openAlertModal('${esc(lastProduct)}',${r.price})">🔔 Alert</button>
       </div>
