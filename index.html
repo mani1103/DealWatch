@@ -544,7 +544,7 @@ async function doSearch() {
     const resp = await fetch('/api/search', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        tools:[{google_search_retrieval:{}}],
+        tools:[{google_search:{}}],
         generationConfig:{temperature:0.1},
         contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney). Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings. Find secondhand/refurbished listings for: ${q} in Australia. Return ONLY valid JSON — no markdown, no backticks, no explanation: {"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/itm/...","notes":"128GB unlocked"}]} Return 5-9 real listings with real URLs, sorted by price ascending. new_price = current new retail AUD (null if unknown).`}]}]
       })
