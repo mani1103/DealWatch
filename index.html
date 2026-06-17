@@ -580,7 +580,7 @@ async function doSearch() {
       body: JSON.stringify({
         tools:[{google_search:{}}],
         generationConfig:{temperature:0.1, thinkingConfig:{thinkingBudget:0}},
-        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney). Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings. Find secondhand/refurbished listings for: ${q} in Australia. Return ONLY valid JSON — no markdown, no backticks, no explanation: {"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/sch/i.html?_nkw=iphone+15+pro&LH_ItemCondition=2500","notes":"128GB unlocked"}]} IMPORTANT for URLs: use search page URLs not direct listing URLs. eBay: https://www.ebay.com.au/sch/i.html?_nkw=QUERY&LH_ItemCondition=2500. Back Market: https://www.backmarket.com.au/en-au/search?q=QUERY. Gumtree: https://www.gumtree.com.au/s-QUERY/k0. Reebelo: https://reebelo.com.au/search?q=QUERY. Amazon: https://www.amazon.com.au/s?k=QUERY+renewed. Replace QUERY with the actual product search terms URL encoded. Return 5-9 listings sorted by price ascending. new_price = current new retail AUD (null if unknown).`}]}]
+        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney). Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings. Find secondhand/refurbished listings for: ${q} in Australia. Return ONLY valid JSON — no markdown, no backticks, no explanation: {"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/sch/i.html?_nkw=iphone+15+pro&LH_ItemCondition=2500","notes":"128GB unlocked"}]} IMPORTANT: Every result MUST have a real price greater than 0. If you cannot find a real price for a platform, skip that platform entirely. Do not include any listing with price 0 or null. For URLs use search page URLs: eBay: https://www.ebay.com.au/sch/i.html?_nkw=QUERY&LH_ItemCondition=2500. Back Market: https://www.backmarket.com.au/en-au/search?q=QUERY. Gumtree: https://www.gumtree.com.au/s-QUERY/k0. Reebelo: https://reebelo.com.au/search?q=QUERY. Amazon: https://www.amazon.com.au/s?k=QUERY+renewed. Replace QUERY with URL encoded product name. Return 5-9 listings sorted by price ascending. new_price = current new retail AUD (null if unknown).`}]}]
       })
     });
     if(!resp.ok) {
@@ -595,7 +595,9 @@ async function doSearch() {
     if(!match) throw new Error('No listings found. Try a more specific product name.');
     const parsed = JSON.parse(match[0]);
     if(!parsed.results||!parsed.results.length) throw new Error('No secondhand listings found.');
-    lastResults=parsed.results; lastProduct=parsed.product||q;
+    const validResults = parsed.results.filter(r => r.price && r.price > 0);
+    if(!validResults.length) throw new Error('No listings with confirmed prices found. Try a more specific search.');
+    lastResults=validResults; lastProduct=parsed.product||q;
     lastNewPrice=parsed.new_price||null; lastCurrency=parsed.currency||'AUD';
     renderResults();
   } catch(e) {
