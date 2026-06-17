@@ -544,7 +544,7 @@ async function doSearch() {
     const resp = await fetch('/api/search', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        tools:[{google_search:{}}],
+        tools:[{google_search_retrieval:{dynamic_retrieval_config:{mode:"MODE_DYNAMIC"}}}],
         generationConfig:{temperature:0.1},
         contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney).
 Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings.
