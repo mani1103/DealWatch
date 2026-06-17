@@ -580,7 +580,27 @@ async function doSearch() {
       body: JSON.stringify({
         tools:[{google_search:{}}],
         generationConfig:{temperature:0.1, thinkingConfig:{thinkingBudget:0}},
-        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished product search assistant for Australian shoppers (Sydney). Search eBay Australia, Back Market, Gumtree, Facebook Marketplace, Reebelo, OzMobiles, Amazon Renewed, Swappa for real current listings. Find secondhand/refurbished listings for: ${q} in Australia. Return ONLY valid JSON — no markdown, no backticks, no explanation: {"product":"Full product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/sch/i.html?_nkw=iphone+15+pro&LH_ItemCondition=2500","notes":"128GB unlocked"}]} IMPORTANT: Every result MUST have a real price greater than 0. If you cannot find a real price for a platform, skip that platform entirely. Do not include any listing with price 0 or null. For URLs use search page URLs: eBay: https://www.ebay.com.au/sch/i.html?_nkw=QUERY&LH_ItemCondition=2500. Back Market: https://www.backmarket.com.au/en-au/search?q=QUERY. Gumtree: https://www.gumtree.com.au/s-QUERY/k0. Reebelo: https://reebelo.com.au/search?q=QUERY. Amazon: https://www.amazon.com.au/s?k=QUERY+renewed. Replace QUERY with URL encoded product name. Return 5-9 listings sorted by price ascending. new_price = current new retail AUD (null if unknown).`}]}]
+        contents:[{role:'user',parts:[{text:`You are a secondhand/refurbished price search assistant for Australian shoppers. Your job is to find real current listings for EXACTLY the product requested — nothing else.
+
+STRICT RULES:
+1. EXACT MATCH ONLY — if user searches "Samsung monitor" return ONLY Samsung monitors. Never return monitor stands, cables, accessories, or other brands.
+2. Search these Australian sites: eBay Australia, Back Market AU, Gumtree, Reebelo, OzMobiles, Amazon AU Renewed.
+3. Every listing MUST have a real price in AUD greater than $0. Skip any platform where you cannot find a real confirmed price.
+4. Return 5-8 results sorted by price ascending.
+5. If you cannot find at least 3 exact matching listings with real prices, return {"error":"No exact listings found for this product in Australia"}.
+
+USER IS SEARCHING FOR: "${q}" in Australia
+
+Return ONLY this JSON format, no markdown, no explanation:
+{"product":"Exact product name","currency":"AUD","new_price":999.00,"results":[{"platform":"eBay Australia","price":399.00,"condition":"Refurbished","shipping":"Free shipping","url":"https://www.ebay.com.au/sch/i.html?_nkw=${encodeURIComponent(q)}&LH_ItemCondition=2500","notes":"specific details like storage/colour"}]}
+
+URL format per platform (replace QUERY with URL-encoded search term):
+- eBay: https://www.ebay.com.au/sch/i.html?_nkw=QUERY&LH_ItemCondition=2500
+- Back Market: https://www.backmarket.com.au/en-au/search?q=QUERY
+- Gumtree: https://www.gumtree.com.au/s-QUERY/k0
+- Reebelo: https://reebelo.com.au/search?q=QUERY
+- Amazon: https://www.amazon.com.au/s?k=QUERY+renewed
+- OzMobiles: https://www.ozmobiles.com.au/search?q=QUERY`}]}]
       })
     });
     if(!resp.ok) {
@@ -594,9 +614,10 @@ async function doSearch() {
     const match = text.match(/\{[\s\S]*\}/);
     if(!match) throw new Error('No listings found. Try a more specific product name.');
     const parsed = JSON.parse(match[0]);
-    if(!parsed.results||!parsed.results.length) throw new Error('No secondhand listings found.');
+    if(!parsed.results||!parsed.results.length) throw new Error('No secondhand listings found. Try a more specific search e.g. "Samsung 27 inch monitor".');
+    if(parsed.error) throw new Error(parsed.error);
     const validResults = parsed.results.filter(r => r.price && r.price > 0);
-    if(!validResults.length) throw new Error('No listings with confirmed prices found. Try a more specific search.');
+    if(!validResults.length) throw new Error('No listings with confirmed prices found. Try adding more details e.g. brand and model number.');
     lastResults=validResults; lastProduct=parsed.product||q;
     lastNewPrice=parsed.new_price||null; lastCurrency=parsed.currency||'AUD';
     renderResults();
